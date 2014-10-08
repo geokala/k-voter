@@ -70,18 +70,58 @@ class Voter(db.Model):
             return voter
 
 
+class Election_thresholds(db.Model):
+    __tablename__ = "election_thresholds"
+    __tableargs__ = (
+        db.UniqueConstraint('election_type', 'threshold_name'),
+    )
+
+    id = db.Column(db.Integer(), primary_key=True)
+    election_type = db.Column(db.String(80),
+                              db.ForeignKey('election_rules.election_type'))
+    threshold_name = db.Column(db.String(50))
+    threshold_description = db.Column(db.String(255))
+    threshold_level = db.Column(db.Integer())
+    threshold_units = db.Column(db.Enum("%", "votes", "top n"))
+
+    def __init__(self, election_id, threshold_name, threshold_level,
+                 threshold_description="", threshold_units="%"):
+        self.election_id = election_id
+        self.threshold_level = threshold_level
+        self.threshold_description = threshold_description
+        self.threshold_units = threshold_units
+
+
+class Election_rules(db.Model):
+    __tablename__ = "election_rules"
+
+    election_type = db.Column(db.String(80), primary_key=True)
+    votes_per_voter = db.Column(db.Integer(), default=1)
+    votes_per_voter_per_candidate = db.Column(db.Integer(), default=1)
+    candidate_can_vote = db.Column(db.Boolean())
+    candidate_can_vote_for_self = db.Column(db.Boolean())
+
+    def __init__(self, election_type, candidate_can_vote=True,
+                 candidate_can_vote_for_self=True, votes_per_voter=1,
+                 votes_per_voter_per_candidate=1):
+        self.election_type = election_type
+        self.votes_per_voter = votes_per_voter
+        self.votes_per_voter_per_candidate = votes_per_voter_per_candidate
+        self.candidate_can_vote = candidate_can_vote
+        self.candidate_can_vote_for_self = candidate_can_vote_for_self
+
+
 class Election(db.Model):
     __tablename__ = "elections"
 
     id = db.Column(db.Integer(), primary_key=True)
-    election_type = db.Column(db.String(80))
+    election_type = db.Column(db.String(80),
+                              db.ForeignKey('election_rules.election_type'))
     location = db.Column(db.String(80))
     potential_voters = db.Column(db.Integer())
     date_of_vote = db.Column(db.DateTime())
     candidates = db.relationship('Candidate',
                                  backref='election')
-    #voters = db.relationship('VotersElections',
-    #                         backref='election')
 
     def __init__(self, election_type, location, potential_voters,
                  date_of_vote):
