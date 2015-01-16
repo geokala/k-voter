@@ -19,29 +19,67 @@ roles_users = db.Table(
 
 
 class Candidate(db.Model):
+    # TODO: This model could do with being improved... significantly
     __tablename__ = 'candidates'
+    __tableargs__ = (
+        db.UniqueConstraint('election_id', 'candidate'),
+    )
 
     id = db.Column(db.Integer(), primary_key=True)
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     election_id = db.Column(db.Integer(), db.ForeignKey('elections.id'))
+    candidate = db.Column(db.String(255))
 
-    def __init__(self, user_id, election_id):
+    def __init__(self, user_id, election_id, candidate):
         self.user_id = user_id
         self.election_id = election_id
+        self.candidate = candidate
 
     @staticmethod
-    def create(user_id, election_id):
+    def create(user_id, election_id, candidate=None):
         try:
             Candidate.query.filter(
                 Candidate.user_id == user_id,
-                Candidate.election_id == election_id
+                Candidate.election_id == election_id,
+                Candidate.candidate == candidate,
             ).one()
             return None
         except NoResultFound:
-            candidate = Candidate(user_id, election_id)
+            candidate = Candidate(user_id, election_id, candidate)
             db.session.add(candidate)
             db.session.commit()
             return candidate
+
+
+class Vote(db.Model):
+    __tablename__ = 'vote'
+    id = db.Column(db.Integer(), primary_key=True)
+    voter_id = db.Column(db.Integer(), db.ForeignKey('voters.id'))
+    candidate_id = db.Column(db.Integer(), db.ForeignKey('candidates.id'))
+
+    def __init__(self, voter_id, candidate_id):
+        self.voter_id = voter_id
+        self.candidate_id = candidate_id
+
+    def create(voter_id, election_id):
+        try:
+            results = Vote.query.filter(
+                Vote.voter_id == voter_id,
+                Vote.election_id == election_id,
+            )
+            # TODO: Check whether we've got too many votes from this voter
+            # for the election they're voting for
+            max_votes_for_election = 1
+            if len(results) > max_votes_for_election:
+                return None
+        except NoResultFound:
+            # No results means they can vote
+            pass
+
+        vote = Vote(voter_id, election_id)
+        db.session.add(vote)
+        db.session.commit()
+        return vote
 
 
 class Voter(db.Model):
@@ -68,47 +106,6 @@ class Voter(db.Model):
             db.session.add(voter)
             db.session.commit()
             return voter
-
-
-class Election_thresholds(db.Model):
-    __tablename__ = "election_thresholds"
-    __tableargs__ = (
-        db.UniqueConstraint('election_type', 'threshold_name'),
-    )
-
-    id = db.Column(db.Integer(), primary_key=True)
-    election_type = db.Column(db.String(80),
-                              db.ForeignKey('election_rules.election_type'))
-    threshold_name = db.Column(db.String(50))
-    threshold_description = db.Column(db.String(255))
-    threshold_level = db.Column(db.Integer())
-    threshold_units = db.Column(db.Enum("%", "votes", "top n"))
-
-    def __init__(self, election_id, threshold_name, threshold_level,
-                 threshold_description="", threshold_units="%"):
-        self.election_id = election_id
-        self.threshold_level = threshold_level
-        self.threshold_description = threshold_description
-        self.threshold_units = threshold_units
-
-
-class Election_rules(db.Model):
-    __tablename__ = "election_rules"
-
-    election_type = db.Column(db.String(80), primary_key=True)
-    votes_per_voter = db.Column(db.Integer(), default=1)
-    votes_per_voter_per_candidate = db.Column(db.Integer(), default=1)
-    candidate_can_vote = db.Column(db.Boolean())
-    candidate_can_vote_for_self = db.Column(db.Boolean())
-
-    def __init__(self, election_type, candidate_can_vote=True,
-                 candidate_can_vote_for_self=True, votes_per_voter=1,
-                 votes_per_voter_per_candidate=1):
-        self.election_type = election_type
-        self.votes_per_voter = votes_per_voter
-        self.votes_per_voter_per_candidate = votes_per_voter_per_candidate
-        self.candidate_can_vote = candidate_can_vote
-        self.candidate_can_vote_for_self = candidate_can_vote_for_self
 
 
 class Election(db.Model):
@@ -150,18 +147,21 @@ class Role(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     name = db.Column(db.String(80), unique=True)
     description = db.Column(db.String(255))
+    location = db.Column(db.Integer(), db.ForeignKey('locations.id'))
 
-    def __init__(self, name, description=""):
+    def __init__(self, name, description="", location=None):
         self.name = name
         self.description = description
+        self.location = location
 
     @staticmethod
-    def get_or_create(name, description=""):
+    def get_or_create(name, description="", location=None):
         try:
-            role = Role.query.filter(Role.name == name).one()
+            role = Role.query.filter(Role.name == name,
+                                     Role.location == location).one()
             return role
         except NoResultFound:
-            role = Role(name, description)
+            role = Role(name, description, location)
             db.session.add(role)
             db.session.commit()
             return role
