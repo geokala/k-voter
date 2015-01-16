@@ -51,8 +51,34 @@ class Candidate(db.Model):
             return candidate
 
 
+class Location(db.Model):
+    __tablename__ = 'locations'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    parent_location_id = db.Column(db.Integer(),
+                                   db.ForeignKey('locations.id'))
+    name = db.Column(db.String(255), required=True)
+
+    def __init__(self, name, parent_location_id=None):
+        self.name = name
+        self.parent_location_id = parent_location_id
+
+    @staticmethod
+    def create(name, parent_location_id=None):
+        try:
+            Vote.query.filter(
+                Location.name == name,
+                Location.parent_location_id == parent_location_id,
+            ).one()
+        except NoResultFound:
+            location = Location(name, parent_location_id)
+            db.session.add(location)
+            db.session.commit()
+            return location
+
+
 class Vote(db.Model):
-    __tablename__ = 'vote'
+    __tablename__ = 'votes'
     id = db.Column(db.Integer(), primary_key=True)
     voter_id = db.Column(db.Integer(), db.ForeignKey('voters.id'))
     candidate_id = db.Column(db.Integer(), db.ForeignKey('candidates.id'))
@@ -61,6 +87,7 @@ class Vote(db.Model):
         self.voter_id = voter_id
         self.candidate_id = candidate_id
 
+    @staticmethod
     def create(voter_id, election_id):
         try:
             results = Vote.query.filter(
@@ -114,11 +141,9 @@ class Election(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     election_type = db.Column(db.String(80),
                               db.ForeignKey('election_rules.election_type'))
-    location = db.Column(db.String(80))
+    location = db.Column(db.Integer(), db.ForeignKey('location.id'))
     potential_voters = db.Column(db.Integer())
     date_of_vote = db.Column(db.DateTime())
-    candidates = db.relationship('Candidate',
-                                 backref='election')
 
     def __init__(self, election_type, location, potential_voters,
                  date_of_vote):
