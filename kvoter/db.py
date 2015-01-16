@@ -17,6 +17,14 @@ roles_users = db.Table(
     db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'))
 )
 
+conditions_election_rounds = db.Table(
+    'conditions_election_rounds',
+    db.Column('condition_id', db.Integer(), db.ForeignKey('conditions.id')),
+    db.Column('election_round_id',
+              db.Integer(),
+              db.ForeignKey('election_rounds.id')),
+)
+
 
 class Candidate(db.Model):
     # TODO: This model could do with being improved... significantly
@@ -57,7 +65,7 @@ class Location(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     parent_location_id = db.Column(db.Integer(),
                                    db.ForeignKey('locations.id'))
-    name = db.Column(db.String(255), required=True)
+    name = db.Column(db.String(255))
 
     def __init__(self, name, parent_location_id=None):
         self.name = name
@@ -135,13 +143,89 @@ class Voter(db.Model):
             return voter
 
 
+class Condition(db.Model):
+    __tablename__ = 'conditions'
+
+    condition_types = db.Enum(
+        'top n votes',
+        'bottom n votes',
+        'over n %',
+        'below n %',
+        'over n',
+        'below n',
+        name='condition_types',
+    )
+
+    id = db.Column(db.Integer(), primary_key=True)
+    condition = db.Column(condition_types)
+    threshold = db.Column(db.Integer())
+
+    def __init__(self, condition, threshold):
+        self.condition = condition
+        self.threshold = threshold
+
+    @staticmethod
+    def create(condition, threshold):
+        try:
+            Condition.query.filter(
+                Condition.condition == condition,
+                Condition.threshold == threshold,
+            ).one()
+            return None
+        except NoResultFound:
+            condition = Condition(condition, threshold)
+            db.session.add(condition)
+            db.session.commit()
+            return condition
+
+
+class ElectionRound(db.Model):
+    __tablename__ = 'election_rounds'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    next_round_id = db.Column(db.Integer(),
+                              db.ForeignKey('election_rounds.id'))
+    # This is really a 'make it to the next round' condition unless there is
+    # no next round.
+    win_condition = db.Column(db.Integer(), db.ForeignKey('conditions.id'))
+    description = db.Column(db.String(255))
+    other_conditions = db.relationship(
+        'Condition',
+        secondary=conditions_election_rounds,
+        backref=db.backref('election_rounds', lazy='dynamic'),
+    )
+
+    def __init__(self, win_condition, description, next_round_id=None):
+        self.win_condition = win_condition
+        self.next_round_id = next_round_id
+        self.description = description
+
+    @staticmethod
+    def create(win_condition, description, next_round_id=None):
+        try:
+            # We could filter just by win condition and next round ID,
+            # but it may make it harder to use if we force all elections
+            # with the same rules to have the same name, especially if this
+            # were to be used in locations with different languages
+            ElectionRound.query.filter(
+                ElectionRound.win_condition == win_condition,
+                ElectionRound.description == description,
+                ElectionRound.next_round_id == next_round_id,
+            ).one()
+            return None
+        except NoResultFound:
+            election_round = ElectionRound()
+            db.session.add(election_round)
+            db.session.commit()
+            return election_round
+
+
 class Election(db.Model):
     __tablename__ = "elections"
 
     id = db.Column(db.Integer(), primary_key=True)
-    election_type = db.Column(db.String(80),
-                              db.ForeignKey('election_rules.election_type'))
-    location = db.Column(db.Integer(), db.ForeignKey('location.id'))
+    first_round = db.Column(db.Integer(), db.ForeignKey('election_rounds.id'))
+    location = db.Column(db.Integer(), db.ForeignKey('locations.id'))
     potential_voters = db.Column(db.Integer())
     date_of_vote = db.Column(db.DateTime())
 
