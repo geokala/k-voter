@@ -23,13 +23,29 @@ def home_view():
         user.id: user
         for user in User.query.all()
     }
+
+    candidate_list = []
+    for candidate in candidates:
+        if candidate.candidate is None:
+            candidate_list.append({
+                'election_id': candidate.election_id,
+                'candidate': users[candidate.user_id],
+                'id': candidate.id,
+            })
+        else:
+            candidate_list.append({
+                'election_id': candidate.election_id,
+                'candidate': candidate.candidate,
+                'id': candidate.id,
+            })
+
     elections = [
         {
             'type': election.election_type,
             'location': election.location,
-            'candidates': [users[candidate.user_id]
-                           for candidate in candidates
-                           if candidate.election_id == election.id],
+            'candidates': [candidate['candidate']
+                           for candidate in candidate_list
+                           if candidate['election_id'] == election.id],
         }
         for election in elections
     ]
