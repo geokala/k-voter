@@ -88,14 +88,20 @@ def secure_redirect(next, digest, fallback):
 
 
 def generate_hmac(message):
-    return hmac.new(bytes(app.config["SECRET_KEY"], "utf8"), bytes(message, "utf8"), "sha256").hexdigest()
+    return hmac.new(
+        bytes(app.config["SECRET_KEY"], "utf8"),
+        bytes(message, "utf8"), "sha256"
+    ).hexdigest()
 
 
 def login_view():
     form = LoginForm(request.form)
     if request.method == 'POST' and form.validate():
         try:
-            user = User.query.filter(or_(User.name == form.username.data, User.email == form.username.data)).one()
+            user = User.query.filter(
+                or_(User.name == form.username.data,
+                    User.email == form.username.data)
+            ).one()
         except NoResultFound:
             # The user does not exist
             user = None
@@ -105,7 +111,13 @@ def login_view():
             flash('Welcome back, %s!' % user.name, 'success')
             # TODO: We need to make sure that 'next' points to something on our
             # site to avoid malicious redirects
-            return redirect(secure_redirect(request.args.get('next'), request.args.get('hmac'), url_for('home')))
+            return redirect(
+                secure_redirect(
+                    request.args.get('next'),
+                    request.args.get('hmac'),
+                    url_for('home'),
+                )
+            )
         else:
             flash('Login failed!', 'danger')
             return redirect(url_for('login'))
@@ -123,7 +135,10 @@ def unauthorized():
             flash(login_manager.localize_callback(login_manager.login_message),
                   category=login_manager.login_message_category)
         else:
-            flash(login_manager.login_message, category=login_manager.login_message_category)
+            flash(
+                login_manager.login_message,
+                category=login_manager.login_message_category
+            )
 
     return redirect(url_for(
         login_manager.login_view,
@@ -138,8 +153,12 @@ def needs_refresh():
         abort(403)
 
     if login_manager.localize_callback is not None:
-        flash(login_manager.localize_callback(login_manager.needs_refresh_message),
-              category=login_manager.needs_refresh_message_category)
+        flash(
+            login_manager.localize_callback(
+                login_manager.needs_refresh_message
+            ),
+            category=login_manager.needs_refresh_message_category,
+        )
     else:
         flash(login_manager.needs_refresh_message,
               category=login_manager.needs_refresh_message_category)
@@ -155,7 +174,13 @@ def logout_view():
     logout_user()
     # TODO: We need to make sure that 'next' points to something on our
     # site to avoid malicious redirects
-    return redirect(secure_redirect(request.args.get('next'), request.args.get('hmac'), url_for('home')))
+    return redirect(
+        secure_redirect(
+            request.args.get('next'),
+            request.args.get('hmac'),
+            url_for('home'),
+        )
+    )
 
 
 def register_view():
@@ -219,11 +244,13 @@ def my_account_view():
                             for election in elections
                             if election.id == form.election_id.data][0]
                 flash(
-                    ('We hope your favourite candidate wins in the %s '
-                     'election in %s, %s!') % (
-                            election.election_type,
-                            election.location,
-                            current_user.name,
+                    (
+                        'We hope your favourite candidate wins in the %s '
+                        'election in %s, %s!'
+                    ) % (
+                        election.election_type,
+                        election.location,
+                        current_user.name,
                     ),
                     'success',
                 )
@@ -244,9 +271,9 @@ def my_account_view():
                             if election.id == form.election_id.data][0]
                 flash(
                     'Good luck in the %s election in %s, %s!' % (
-                            election.election_type,
-                            election.location,
-                            current_user.name,
+                        election.election_type,
+                        election.location,
+                        current_user.name,
                     ),
                     'success',
                 )
