@@ -126,6 +126,7 @@ def create_location_view():
                 ),
                 'success',
             )
+            current_user.promote_location_admin(new_location)
             return redirect(url_for('home'))
     else:
         return render_template("location.html", form=form)

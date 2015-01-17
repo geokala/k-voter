@@ -339,3 +339,27 @@ class User(db.Model, UserMixin):
             self.is_admin = False
             db.session.commit()
         return self
+
+    def promote_location_admin(self, location):
+        if location not in self.locations_admin:
+            self.locations_admin.append(location)
+            db.session.commit()
+        return self
+
+    def demote_location_admin(self, location):
+        if location in self.locations_admin:
+            self.locations_admin.remove(location)
+            db.session.commit()
+        return self
+
+    def promote_election_admin(self, election):
+        if election not in self.elections_admin:
+            self.elections_admin.append(election)
+            db.session.commit()
+        return self
+
+    def demote_election_admin(self, election):
+        if election in self.elections_admin:
+            self.elections_admin.remove(election)
+            db.session.commit()
+        return self
