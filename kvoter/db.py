@@ -74,7 +74,7 @@ class Location(db.Model):
     @staticmethod
     def create(name, parent_location_id=None):
         try:
-            Vote.query.filter(
+            Location.query.filter(
                 Location.name == name,
                 Location.parent_location_id == parent_location_id,
             ).one()

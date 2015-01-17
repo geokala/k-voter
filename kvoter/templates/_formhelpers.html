@@ -1,7 +1,15 @@
 {% macro render_field(field) %}
   <div class="form-group{% if field.errors %} has-error {% endif%}">
       <label for="{{ field.short_name }}">{{ field.label.text }}</label>
+  {% if field.type == 'SelectField' %}
+      <select class="form-control" id="{{ field.short_name }}" name="{{ field.name }}">
+    {% for choice in field.choices %}
+          <option value="{{ choice[0] }}">{{ choice[1] }}</option>
+    {% endfor %}
+      </select>
+  {% else %}
       <input type="{{ field.widget.input_type }}" class="form-control" id="{{ field.short_name }}" name="{{ field.name }}" placeholder="Enter {{ field.label.text }}">
+  {% endif %}
   {% if field.errors %}
     {% for error in field.errors %}
       <span class="help-block">{{ error }}</span>

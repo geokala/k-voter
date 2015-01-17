@@ -2,6 +2,7 @@ from kvoter import app
 from kvoter.auth import (login_view, logout_view, register_view,
                          my_account_view)
 from kvoter.election import create_election_view
+from kvoter.location import create_location_view
 from kvoter.home import home_view
 
 app.add_url_rule(
@@ -31,6 +32,12 @@ app.add_url_rule(
     '/create_election',
     'create_election',
     create_election_view,
+    methods=['GET', 'POST'],
+)
+app.add_url_rule(
+    '/create_location',
+    'create_location',
+    create_location_view,
     methods=['GET', 'POST'],
 )
 app.add_url_rule(
