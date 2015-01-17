@@ -10,8 +10,9 @@ if __name__ == '__main__':
     try:
         User.query.filter(User.name == "admin").one()
     except NoResultFound:
-        user = User("admin", "admin@kvoter.local", "admin", ["voter", "admin"])
+        user = User("admin", "admin@kvoter.local", "admin")
         user.confirmed_at = datetime.now() - timedelta(days=2)
+        user.is_admin = True
         db.session.add(user)
         db.session.commit()
 

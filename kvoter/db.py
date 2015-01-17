@@ -11,10 +11,16 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///kvoter.db"
 
 db = SQLAlchemy(app)
 
-roles_users = db.Table(
-    'user_roles',
+location_admin_users = db.Table(
+    'location_admin_users',
     db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
-    db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'))
+    db.Column('location_id', db.Integer(), db.ForeignKey('locations.id')),
+)
+
+election_admin_users = db.Table(
+    'election_admin_users',
+    db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
+    db.Column('election_id', db.Integer(), db.ForeignKey('elections.id')),
 )
 
 conditions_election_rounds = db.Table(
@@ -250,32 +256,6 @@ class Election(db.Model):
             return election
 
 
-class Role(db.Model):
-    __tablename__ = "roles"
-
-    id = db.Column(db.Integer(), primary_key=True)
-    name = db.Column(db.String(80), unique=True)
-    description = db.Column(db.String(255))
-    location = db.Column(db.Integer(), db.ForeignKey('locations.id'))
-
-    def __init__(self, name, description="", location=None):
-        self.name = name
-        self.description = description
-        self.location = location
-
-    @staticmethod
-    def get_or_create(name, description="", location=None):
-        try:
-            role = Role.query.filter(Role.name == name,
-                                     Role.location == location).one()
-            return role
-        except NoResultFound:
-            role = Role(name, description, location)
-            db.session.add(role)
-            db.session.commit()
-            return role
-
-
 class User(db.Model, UserMixin):
     __tablename__ = "users"
 
@@ -287,10 +267,19 @@ class User(db.Model, UserMixin):
     confirmed_at = db.Column(db.DateTime())
     created_on = db.Column(db.DateTime())
     confirmation_code = db.Column(db.String(255))
-    roles = db.relationship('Role', secondary=roles_users,
-                            backref=db.backref('users', lazy='dynamic'))
+    is_admin = db.Column(db.Boolean(), default=False)
+    locations_admin = db.relationship(
+        'Location',
+        secondary=location_admin_users,
+        backref=db.backref('locations', lazy='dynamic'),
+    )
+    elections_admin = db.relationship(
+        'Election',
+        secondary=election_admin_users,
+        backref=db.backref('elections', lazy='dynamic'),
+    )
 
-    def __init__(self, name, email, password, roles=("voter",)):
+    def __init__(self, name, email, password):
         self.name = name
         self.email = email
         self.password = password
@@ -299,9 +288,6 @@ class User(db.Model, UserMixin):
         self.created_on = datetime.now()
         self.confirmation_code = "".join(choice(ascii_letters + digits)
                                          for _ in range(32))
-        for role in roles:
-            role_obj = Role.get_or_create(role)
-            self.roles.append(role_obj)
 
     @property
     def password(self):
@@ -325,6 +311,7 @@ class User(db.Model, UserMixin):
 
     def is_active(self):
         # TODO: Use self.confirmed_at <= datetime.now() again?
+        # After we have a confirmation method.
         return self.active
 
     def validate_password(self, password):
@@ -340,3 +327,15 @@ class User(db.Model, UserMixin):
             db.session.add(user)
             db.session.commit()
             return user
+
+    def promote_admin(self):
+        if not self.is_admin:
+            self.is_admin = True
+            db.session.commit()
+        return self
+
+    def demote_admin(self):
+        if self.is_admin:
+            self.is_admin = False
+            db.session.commit()
+        return self

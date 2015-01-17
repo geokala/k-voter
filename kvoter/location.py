@@ -5,6 +5,14 @@ from wtforms import Form, TextField, validators, SelectField
 from kvoter.utils import user_not_authorised_to
 
 
+def int_or_null(data):
+    if data == 'None':
+        return None
+    else:
+        print('not none')
+        return int(data)
+
+
 class LocationForm(Form):
     location_name = TextField(
         'Location name',
@@ -15,33 +23,26 @@ class LocationForm(Form):
     )
     parent_location = SelectField(
         'Parent location',
-        coerce=int,
+        coerce=int_or_null,
     )
 
 
 @login_required
 def create_location_view():
-    user_roles = User.query.filter(
+    locations_admin = User.query.filter(
         User.id == current_user.id,
-    ).one().roles
-    if user_roles == 0:
-        # A user with no roles cannot be authorised to create any locations
+    ).one().locations_admin
+    if len(locations_admin) == 0 and not current_user.is_admin:
+        # A standard user with no roles cannot be authorised to create any
+        # locations
         return user_not_authorised_to('create locations')
 
-    allowed_locations = []
-    can_create_top_level = False
-    for role in user_roles:
-        if role.name == 'admin':
-            # Admins can create locations anywhere
-            allowed_locations = 'admin'
-            can_create_top_level = True
-            break
-        elif role.name == 'location_admin':
-            allowed_locations.append(role.location)
+    allowed_locations = [location.id for location in locations_admin]
 
     # Getting all locations means more memory usage but only one trip to the
     # DB. The alternative is multiple trips later, which is likely to cause
     # 'interesting' performance penalties with more than a few locations.
+    # See location parent mapping for display_locations
     all_locations = {
         location.id: {
             'name': location.name,
@@ -50,8 +51,10 @@ def create_location_view():
         for location in Location.query.all()
     }
 
-    if allowed_locations == 'admin':
+    can_create_top_level = False
+    if current_user.is_admin:
         allowed_locations = all_locations
+        can_create_top_level = True
     elif len(allowed_locations) > 0:
         allowed_locations = {location: details
                              for location, details in all_locations.items()
