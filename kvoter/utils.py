@@ -7,7 +7,6 @@ def int_or_null(data):
     if data == 'None':
         return None
     else:
-        print('not none')
         return int(data)
 
 
