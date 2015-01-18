@@ -1,9 +1,8 @@
 from flask.ext.login import login_required, current_user
-from kvoter.db import Location, User
+from kvoter.db import Location
 from flask import request, render_template, redirect, url_for, flash
 from wtforms import Form, TextField, validators, SelectField
-from kvoter.utils import (user_not_authorised_to,
-                          int_or_null,
+from kvoter.utils import (int_or_null,
                           get_authorised_locations)
 
 

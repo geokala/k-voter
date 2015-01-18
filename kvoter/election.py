@@ -1,7 +1,8 @@
 from flask.ext.login import login_required
 from kvoter.db import Election
 from flask import request, render_template, redirect, url_for, flash
-from wtforms import Form, TextField, IntegerField, DateField, validators, SelectField
+from wtforms import (Form, TextField, IntegerField, DateField, validators,
+                     SelectField)
 from kvoter.utils import int_or_null, get_authorised_locations
 
 
