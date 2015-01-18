@@ -1,4 +1,4 @@
-from flask.ext.login import login_required
+from flask.ext.login import login_required, current_user
 from kvoter.db import Election, Condition, ElectionRound
 from flask import request, render_template, redirect, url_for, flash
 from wtforms import (Form, TextField, IntegerField, DateField, validators,
@@ -47,9 +47,14 @@ def create_election_view():
         (condition, condition)
         for condition in Condition.condition_types.enums
     )
-    allowed_locations = get_authorised_locations()
+    allowed_locations = get_authorised_locations(include_top_level=False)
     if 'error' in allowed_locations.keys():
         return allowed_locations['error']
+
+    if len(allowed_locations['basic']) == 0:
+        flash('There are no locations in which you can create an election.',
+              'danger')
+        return redirect(url_for('home'))
 
     form = ElectionForm(request.form)
     form.location.choices = allowed_locations['display']
@@ -101,6 +106,7 @@ def create_election_view():
                 ),
                 'success',
             )
+            current_user.promote_election_admin(new_election)
             return redirect(url_for('home'))
     else:
         return render_template("election.html", form=form)

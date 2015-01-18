@@ -26,7 +26,7 @@ def user_not_authorised_to(action):
     return redirect(url_for('home'))
 
 
-def get_authorised_locations():
+def get_authorised_locations(include_top_level=True):
     locations_admin = User.query.filter(
         User.id == current_user.id,
     ).one().locations_admin
@@ -70,7 +70,7 @@ def get_authorised_locations():
     allowed_locations = [(location, details['name'])
                          for location, details in allowed_locations.items()]
 
-    if can_create_top_level:
+    if can_create_top_level and include_top_level:
         allowed_locations.append((None, '-'))
 
     # Make the locations easier to read
