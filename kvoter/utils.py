@@ -20,13 +20,14 @@ def user_not_authorised_to(action):
         action -- The action the user is not allowed to perform.
     """
     flash(
-        'You are not authorised to create locations!',
+        'You are not authorised to %s!' % action,
         'danger',
     )
     return redirect(url_for('home'))
 
 
-def get_authorised_locations(include_top_level=True):
+def get_authorised_locations(include_top_level=True,
+                             unauth_message='create_locations'):
     locations_admin = User.query.filter(
         User.id == current_user.id,
     ).one().locations_admin
@@ -34,7 +35,7 @@ def get_authorised_locations(include_top_level=True):
     # Abort quickly if we can
     if len(locations_admin) and not current_user.is_admin:
         return {
-            'error': user_not_authorised_to('create locations'),
+            'error': user_not_authorised_to(unauth_message),
         }
 
     allowed_locations = [location.id for location in locations_admin]
@@ -63,7 +64,7 @@ def get_authorised_locations(include_top_level=True):
         # With no location_admin or admin privs, the user cannot create
         # locations
         return {
-            'error': user_not_authorised_to('create locations'),
+            'error': user_not_authorised_to(unauth_message),
         }
 
     # Format the allowed locations in a useful manner

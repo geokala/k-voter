@@ -47,7 +47,10 @@ def create_election_view():
         (condition, condition)
         for condition in Condition.condition_types.enums
     )
-    allowed_locations = get_authorised_locations(include_top_level=False)
+    allowed_locations = get_authorised_locations(
+       include_top_level=False,
+       unauth_message='create elections in any existing locations',
+    )
     if 'error' in allowed_locations.keys():
         return allowed_locations['error']
 
