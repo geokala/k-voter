@@ -1,7 +1,8 @@
 from flask.ext.login import login_required
 from kvoter.db import Election
 from flask import request, render_template, redirect, url_for, flash
-from wtforms import Form, TextField, IntegerField, DateField, validators
+from wtforms import Form, TextField, IntegerField, DateField, validators, SelectField
+from kvoter.utils import int_or_null, get_authorised_locations
 
 
 class ElectionForm(Form):
@@ -12,12 +13,9 @@ class ElectionForm(Form):
             validators.Required(),
         ],
     )
-    location = TextField(
+    location = SelectField(
         'Election location',
-        [
-            validators.Length(max=80),
-            validators.Required(),
-        ],
+        coerce=int_or_null,
     )
     potential_voters = IntegerField(
         'Potential voters',
@@ -35,7 +33,12 @@ class ElectionForm(Form):
 
 @login_required
 def create_election_view():
+    allowed_locations = get_authorised_locations()
+    if 'error' in allowed_locations.keys():
+        return allowed_locations['error']
+
     form = ElectionForm(request.form)
+    form.location.choices = allowed_locations['display']
     if request.method == 'POST' and form.validate():
         new_election = Election.create(
             election_type=form.election_type.data,
