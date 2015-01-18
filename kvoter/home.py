@@ -1,6 +1,6 @@
 from flask import render_template, request
 from kvoter import app
-from kvoter.db import Election, Candidate, User
+from kvoter.db import Election, Candidate, User, Location
 from wtforms import Form, IntegerField, validators
 
 
@@ -39,10 +39,13 @@ def home_view():
                 'id': candidate.id,
             })
 
+    locations = {location.id: location.name
+                 for location in Location.query.all()}
+
     elections = [
         {
             'type': election.name,
-            'location': election.location,
+            'location': locations[election.location],
             'candidates': [candidate['candidate']
                            for candidate in candidate_list
                            if candidate['election_id'] == election.id],

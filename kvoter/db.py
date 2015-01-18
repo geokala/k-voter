@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from sqlalchemy.orm.exc import NoResultFound
 from kvoter.app import app
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -253,6 +253,15 @@ class Election(db.Model):
     @staticmethod
     def create(name, location, potential_voters, date_of_vote,
                first_round=None):
+        # This needs to be coerced here because otherwise we will allow
+        # creation of duplicates as the time will be converted when it is
+        # inserted, but not when used for comparison
+        if type(date_of_vote) == datetime.date:
+            date_of_vote = datetime.datetime.fromordinal(
+                date_of_vote.toordinal()
+            )
+        elif type(date_of_vote) != datetime.datetime:
+            date_of_vote = datetime.datetime.strptime(date_of_vote, '%Y-%m-%d')
         try:
             # Having an election with the same name, location, and date wuld
             # just be confusing.
@@ -304,7 +313,7 @@ class User(db.Model, UserMixin):
         self.password = password
         self.active = True
         self.confirmed_at = None
-        self.created_on = datetime.now()
+        self.created_on = datetime.datetime.now()
         self.confirmation_code = "".join(choice(ascii_letters + digits)
                                          for _ in range(32))
 
@@ -329,7 +338,7 @@ class User(db.Model, UserMixin):
         self._password = self.hash_password(password)
 
     def is_active(self):
-        # TODO: Use self.confirmed_at <= datetime.now() again?
+        # TODO: Use self.confirmed_at <= datetime.datetime.now() again?
         # After we have a confirmation method.
         return self.active
 
