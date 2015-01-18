@@ -28,12 +28,10 @@ def user_not_authorised_to(action):
 
 def get_authorised_locations(include_top_level=True,
                              unauth_message='create_locations'):
-    locations_admin = User.query.filter(
-        User.id == current_user.id,
-    ).one().locations_admin
+    locations_admin = current_user.locations_admin
 
     # Abort quickly if we can
-    if len(locations_admin) and not current_user.is_admin:
+    if len(locations_admin) == 0 and not current_user.is_admin:
         return {
             'error': user_not_authorised_to(unauth_message),
         }
