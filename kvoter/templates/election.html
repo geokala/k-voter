@@ -5,7 +5,9 @@
     <form action="" method=post class="form-horizontal">
         <h2>Register</h2>
         <dl>
-            {{ render_field(form.election_type) }}
+            {{ render_field(form.election_title) }}
+            {{ render_field(form.win_condition_type) }}
+            {{ render_field(form.win_condition_threshold) }}
             {{ render_field(form.location) }}
             {{ render_field(form.potential_voters) }}
             {{ render_field(form.date_of_vote) }}

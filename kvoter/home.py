@@ -41,7 +41,7 @@ def home_view():
 
     elections = [
         {
-            'type': election.election_type,
+            'type': election.name,
             'location': election.location,
             'candidates': [candidate['candidate']
                            for candidate in candidate_list

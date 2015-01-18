@@ -153,12 +153,12 @@ class Condition(db.Model):
     __tablename__ = 'conditions'
 
     condition_types = db.Enum(
-        'top n votes',
-        'bottom n votes',
-        'over n %',
-        'below n %',
-        'over n',
-        'below n',
+        'Top n votes received',
+        'Bottom n votes received',
+        'More than n% of votes',
+        'Less than n% of votes',
+        'More than n votes',
+        'Less than n votes',
         name='condition_types',
     )
 
@@ -171,13 +171,13 @@ class Condition(db.Model):
         self.threshold = threshold
 
     @staticmethod
-    def create(condition, threshold):
+    def get_or_create(condition, threshold):
         try:
-            Condition.query.filter(
+            condition = Condition.query.filter(
                 Condition.condition == condition,
                 Condition.threshold == threshold,
             ).one()
-            return None
+            return condition
         except NoResultFound:
             condition = Condition(condition, threshold)
             db.session.add(condition)
@@ -195,6 +195,8 @@ class ElectionRound(db.Model):
     # no next round.
     win_condition = db.Column(db.Integer(), db.ForeignKey('conditions.id'))
     description = db.Column(db.String(255))
+    # TODO: This actually needs to map to a sub table with descriptions of
+    # what meeting the condition(s) causes- e.g. 5% of votes: Deposit returned
     other_conditions = db.relationship(
         'Condition',
         secondary=conditions_election_rounds,
@@ -207,20 +209,24 @@ class ElectionRound(db.Model):
         self.description = description
 
     @staticmethod
-    def create(win_condition, description, next_round_id=None):
+    def get_or_create(win_condition, description, next_round_id=None):
         try:
             # We could filter just by win condition and next round ID,
             # but it may make it harder to use if we force all elections
             # with the same rules to have the same name, especially if this
             # were to be used in locations with different languages
-            ElectionRound.query.filter(
+            election_round = ElectionRound.query.filter(
                 ElectionRound.win_condition == win_condition,
                 ElectionRound.description == description,
                 ElectionRound.next_round_id == next_round_id,
             ).one()
-            return None
+            return election_round
         except NoResultFound:
-            election_round = ElectionRound()
+            election_round = ElectionRound(
+                win_condition=win_condition,
+                description=description,
+                next_round_id=next_round_id,
+            )
             db.session.add(election_round)
             db.session.commit()
             return election_round
@@ -234,23 +240,36 @@ class Election(db.Model):
     location = db.Column(db.Integer(), db.ForeignKey('locations.id'))
     potential_voters = db.Column(db.Integer())
     date_of_vote = db.Column(db.DateTime())
+    name = db.Column(db.String(255))
 
-    def __init__(self, election_type, location, potential_voters,
-                 date_of_vote):
-        self.election_type = election_type
+    def __init__(self, name, location, potential_voters, date_of_vote,
+                 first_round):
+        self.name = name
         self.location = location
         self.potential_voters = potential_voters
         self.date_of_vote = date_of_vote
+        self.first_round = first_round
 
     @staticmethod
-    def create(election_type, location, potential_voters, date_of_vote):
+    def create(name, location, potential_voters, date_of_vote,
+               first_round=None):
         try:
-            Election.query.filter(Election.election_type == election_type,
-                                  Election.location == location).one()
+            # Having an election with the same name, location, and date wuld
+            # just be confusing.
+            Election.query.filter(
+                Election.name == name,
+                Election.location == location,
+                Election.date_of_vote == date_of_vote,
+            ).one()
             return None
         except NoResultFound:
-            election = Election(election_type, location, potential_voters,
-                                date_of_vote)
+            election = Election(
+                name=name,
+                location=location,
+                potential_voters=potential_voters,
+                date_of_vote=date_of_vote,
+                first_round=first_round,
+            )
             db.session.add(election)
             db.session.commit()
             return election
